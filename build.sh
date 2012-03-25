@@ -9,7 +9,7 @@ setup ()
     fi
     . "$ANDROID_BUILD_TOP"/build/envsetup.sh
 
-    KERNEL_DIR="$(dirname "$(readlink -f "$0")")"
+    KERNEL_DIR=`pwd -P`/"$(dirname "$0")"
     BUILD_DIR="$KERNEL_DIR/build"
     MODULES=("drivers/samsung/fm_si4709/Si4709_driver.ko" "drivers/scsi/scsi_wait_scan.ko" "drivers/net/wireless/bcmdhd/dhd.ko")
 
@@ -28,6 +28,10 @@ setup ()
     case `uname -s` in
         Darwin)
             CROSS_PREFIX_ARCH="darwin-x86"
+            if [ -d /opt/local/libexec/gnubin/ ]
+            then
+                PATH="/opt/local/libexec/gnubin/:$PATH"
+            fi
             ;;
         *)
             CROSS_PREFIX_ARCH="linux-x86"
