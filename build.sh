@@ -24,7 +24,12 @@ setup ()
     fi
 
     export USE_SEC_FIPS_MODE=true
+
+    if [ $HOSTNAME = "netchip-workstation" ] ; then
+    CROSS_PREFIX="/opt/linaro-4.5-toolchain/bin/arm-eabi-"
+    else
     CROSS_PREFIX="$ANDROID_BUILD_TOP/prebuilt/linux-x86/toolchain/arm-eabi-4.4.3/bin/arm-eabi-"
+    fi
 }
 
 build ()
