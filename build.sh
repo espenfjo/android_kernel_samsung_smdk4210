@@ -9,7 +9,7 @@ setup ()
     fi
     . "$ANDROID_BUILD_TOP"/build/envsetup.sh
 
-    KERNEL_DIR="$(dirname "$(readlink -f "$0")")"
+    KERNEL_DIR=`pwd -P`/"$(dirname "$0")"
     BUILD_DIR="$KERNEL_DIR/build"
     MODULES=("drivers/samsung/fm_si4709/Si4709_driver.ko" "drivers/scsi/scsi_wait_scan.ko" "drivers/net/wireless/bcmdhd/dhd.ko")
 
@@ -24,7 +24,21 @@ setup ()
     fi
 
     export USE_SEC_FIPS_MODE=true
-    CROSS_PREFIX="$ANDROID_BUILD_TOP/prebuilt/linux-x86/toolchain/arm-eabi-4.4.3/bin/arm-eabi-"
+# Common defines (Arch-dependent)
+    case `uname -s` in
+        Darwin)
+            CROSS_PREFIX_ARCH="darwin-x86"
+            if [ -d /opt/local/libexec/gnubin/ ]
+            then
+                PATH="/opt/local/libexec/gnubin/:$PATH"
+            fi
+            ;;
+        *)
+            CROSS_PREFIX_ARCH="linux-x86"
+            ;;
+    esac
+    
+    CROSS_PREFIX=${CROSS_PREFIX:-"$ANDROID_BUILD_TOP/prebuilt/$CROSS_PREFIX_ARCH/toolchain/arm-eabi-4.4.3/bin/arm-eabi-"}    
 }
 
 build ()
@@ -36,7 +50,7 @@ build ()
     [ x = "x$NO_RM" ] && rm -fr "$target_dir"
     mkdir -p "$target_dir/usr"
     cp "$KERNEL_DIR/usr/"*.list "$target_dir/usr"
-    sed "s|usr/|$KERNEL_DIR/usr/|g" -i "$target_dir/usr/"*.list
+    sed -i' ' "s|usr/|$KERNEL_DIR/usr/|g" "$target_dir/usr/"*.list
     [ x = "x$NO_DEFCONFIG" ] && mka -C "$KERNEL_DIR" O="$target_dir" android_${target}_defconfig ARCH=arm HOSTCC="$CCACHE gcc"
     if [ x = "x$NO_BUILD" ] ; then
         mka -C "$KERNEL_DIR" O="$target_dir" ARCH=arm HOSTCC="$CCACHE gcc" CROSS_COMPILE="$CCACHE $CROSS_PREFIX" modules
