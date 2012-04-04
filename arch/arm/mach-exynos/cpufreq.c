@@ -255,7 +255,7 @@ int exynos_cpufreq_lock(unsigned int nId,
 	freq_table = exynos_info->freq_table;
 
 	//do not lock to higher than max_current_idx or lower than L3 -gm
-	cpufreq_level = max( min(exynos_info->max_current_idx, exynos_info->pll_safe_idx) ,
+	cpufreq_level = max( (int) min(exynos_info->max_current_idx, exynos_info->pll_safe_idx) ,
 							(int)cpufreq_level);
 
 	mutex_lock(&set_cpu_freq_lock);
