@@ -41,6 +41,7 @@
 #include <plat/fimc-core.h>
 #include <plat/camport.h>
 #include <plat/mipi_csis.h>
+#include <plat/udc-hs.h>
 
 #include <mach/map.h>
 
@@ -747,7 +748,6 @@ static struct s3c_sdhci_platdata universal_hsmmc0_data __initdata = {
 	.host_caps		= (MMC_CAP_8_BIT_DATA | MMC_CAP_4_BIT_DATA |
 				MMC_CAP_MMC_HIGHSPEED | MMC_CAP_SD_HIGHSPEED),
 	.cd_type		= S3C_SDHCI_CD_PERMANENT,
-	.clk_type		= S3C_SDHCI_CLK_DIV_EXTERNAL,
 };
 
 static struct regulator_consumer_supply mmc0_supplies[] = {
@@ -787,7 +787,6 @@ static struct s3c_sdhci_platdata universal_hsmmc2_data __initdata = {
 	.ext_cd_gpio		= EXYNOS4_GPX3(4),      /* XEINT_28 */
 	.ext_cd_gpio_invert	= 1,
 	.cd_type		= S3C_SDHCI_CD_GPIO,
-	.clk_type		= S3C_SDHCI_CLK_DIV_EXTERNAL,
 };
 
 /* WiFi */
@@ -991,6 +990,9 @@ static struct gpio universal_camera_gpios[] = {
 	{ GPIO_CAM_VGA_NSTBY,	GPIOF_OUT_INIT_LOW,  "CAM_VGA_NSTBY" },
 };
 
+/* USB OTG */
+static struct s3c_hsotg_plat universal_hsotg_pdata;
+
 static void __init universal_camera_init(void)
 {
 	s3c_set_platdata(&mipi_csis_platdata, sizeof(mipi_csis_platdata),
@@ -1036,6 +1038,7 @@ static struct platform_device *universal_devices[] __initdata = {
 	&s3c_device_i2c5,
 	&s5p_device_i2c_hdmiphy,
 	&hdmi_fixed_voltage,
+	&exynos4_device_pd[PD_TV],
 	&s5p_device_hdmi,
 	&s5p_device_sdo,
 	&s5p_device_mixer,
@@ -1049,6 +1052,9 @@ static struct platform_device *universal_devices[] __initdata = {
 	&s5p_device_mfc,
 	&s5p_device_mfc_l,
 	&s5p_device_mfc_r,
+	&exynos4_device_pd[PD_MFC],
+	&exynos4_device_pd[PD_LCD0],
+	&exynos4_device_pd[PD_CAM],
 	&cam_vt_dio_fixed_reg_dev,
 	&cam_i_core_fixed_reg_dev,
 	&cam_s_if_fixed_reg_dev,
@@ -1068,6 +1074,10 @@ static void s5p_tv_setup(void)
 	gpio_request_one(EXYNOS4_GPX3(7), GPIOF_IN, "hpd-plug");
 	s3c_gpio_cfgpin(EXYNOS4_GPX3(7), S3C_GPIO_SFN(0x3));
 	s3c_gpio_setpull(EXYNOS4_GPX3(7), S3C_GPIO_PULL_NONE);
+
+	/* setup dependencies between TV devices */
+	s5p_device_hdmi.dev.parent = &exynos4_device_pd[PD_TV].dev;
+	s5p_device_mixer.dev.parent = &exynos4_device_pd[PD_TV].dev;
 }
 
 static void __init universal_reserve(void)
@@ -1097,10 +1107,20 @@ static void __init universal_machine_init(void)
 	i2c_register_board_info(I2C_GPIO_BUS_12, i2c_gpio12_devs,
 			ARRAY_SIZE(i2c_gpio12_devs));
 
+	s3c_hsotg_set_platdata(&universal_hsotg_pdata);
 	universal_camera_init();
 
 	/* Last */
 	platform_add_devices(universal_devices, ARRAY_SIZE(universal_devices));
+
+	s5p_device_mfc.dev.parent = &exynos4_device_pd[PD_MFC].dev;
+	s5p_device_fimd0.dev.parent = &exynos4_device_pd[PD_LCD0].dev;
+
+	s5p_device_fimc0.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+	s5p_device_fimc1.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+	s5p_device_fimc2.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+	s5p_device_fimc3.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+	s5p_device_mipi_csis0.dev.parent = &exynos4_device_pd[PD_CAM].dev;
 }
 
 MACHINE_START(UNIVERSAL_C210, "UNIVERSAL_C210")

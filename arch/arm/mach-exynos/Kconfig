@@ -35,7 +35,6 @@ config CPU_EXYNOS4210
 	select ARM_CPU_SUSPEND if PM
 	select S5P_PM if PM
 	select S5P_SLEEP if PM
-	select PM_GENERIC_DOMAINS
 	help
 	  Enable EXYNOS4210 CPU support
 
@@ -84,6 +83,11 @@ config EXYNOS4_SETUP_FIMD0
 	bool
 	help
 	  Common setup code for FIMD0.
+
+config EXYNOS4_DEV_PD
+	bool
+	help
+	  Compile in platform device definitions for Power Domain
 
 config EXYNOS4_DEV_SYSMMU
 	bool
@@ -166,6 +170,16 @@ config EXYNOS4_SETUP_SPI
 	help
 	  Common setup code for SPI GPIO configurations.
 
+config EXYNOS4_DEV_TMU
+	bool "Exynos4 tmu device support"
+	default n
+	depends on ARCH_EXYNOS4
+	---help---
+	  Compile in platform device definitions for TMU. This macro also
+	  enables compilation hwmon base TMU driver and also allows compilation
+	  of the platform device files. The platform data in this case is trip
+	  temperature and some tmu h/w configurations related parameter.
+
 # machine support
 
 if ARCH_EXYNOS4
@@ -203,9 +217,11 @@ config MACH_SMDKV310
 	select EXYNOS4_DEV_AHCI
 	select SAMSUNG_DEV_KEYPAD
 	select EXYNOS4_DEV_DMA
+	select EXYNOS4_DEV_PD
 	select SAMSUNG_DEV_PWM
 	select EXYNOS4_DEV_USB_OHCI
 	select EXYNOS4_DEV_SYSMMU
+	select EXYNOS4_DEV_TMU
 	select EXYNOS4_SETUP_FIMD0
 	select EXYNOS4_SETUP_I2C1
 	select EXYNOS4_SETUP_KEYPAD
@@ -244,6 +260,7 @@ config MACH_UNIVERSAL_C210
 	select S3C_DEV_HSMMC
 	select S3C_DEV_HSMMC2
 	select S3C_DEV_HSMMC3
+	select S3C_DEV_USB_HSOTG
 	select S3C_DEV_I2C1
 	select S3C_DEV_I2C3
 	select S3C_DEV_I2C5
@@ -252,6 +269,7 @@ config MACH_UNIVERSAL_C210
 	select S5P_DEV_ONENAND
 	select S5P_DEV_TV
 	select EXYNOS4_DEV_DMA
+	select EXYNOS4_DEV_PD
 	select EXYNOS4_SETUP_FIMD0
 	select EXYNOS4_SETUP_I2C1
 	select EXYNOS4_SETUP_I2C3
@@ -259,6 +277,7 @@ config MACH_UNIVERSAL_C210
 	select EXYNOS4_SETUP_SDHCI
 	select EXYNOS4_SETUP_FIMC
 	select S5P_SETUP_MIPIPHY
+	select EXYNOS4_SETUP_USB_PHY
 	help
 	  Machine support for Samsung Mobile Universal S5PC210 Reference
 	  Board.
@@ -286,8 +305,10 @@ config MACH_NURI
 	select S5P_DEV_G2D
 	select S5P_DEV_MFC
 	select S5P_DEV_USB_EHCI
+	select S3C_DEV_USB_HSOTG
 	select S5P_SETUP_MIPIPHY
 	select EXYNOS4_DEV_DMA
+	select EXYNOS4_DEV_PD
 	select EXYNOS4_SETUP_FIMC
 	select EXYNOS4_SETUP_FIMD0
 	select EXYNOS4_SETUP_I2C1
@@ -309,6 +330,9 @@ config MACH_ORIGEN
 	select S3C_DEV_WDT
 	select S3C_DEV_HSMMC
 	select S3C_DEV_HSMMC2
+	select S3C_DEV_HSMMC3
+	select S3C_DEV_I2C1
+	select S3C_DEV_USB_HSOTG
 	select S5P_DEV_FIMC0
 	select S5P_DEV_FIMC1
 	select S5P_DEV_FIMC2
@@ -323,8 +347,10 @@ config MACH_ORIGEN
 	select SAMSUNG_DEV_BACKLIGHT
 	select SAMSUNG_DEV_PWM
 	select EXYNOS4_DEV_DMA
+	select EXYNOS4_DEV_PD
 	select EXYNOS4_DEV_USB_OHCI
 	select EXYNOS4_SETUP_FIMD0
+	select EXYNOS4_SETUP_I2C1
 	select EXYNOS4_SETUP_SDHCI
 	select EXYNOS4_SETUP_USB_PHY
 	help

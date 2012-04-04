@@ -50,6 +50,12 @@
 #define L2_AUX_VAL 0x7C470001
 #define L2_AUX_MASK 0xC200ffff
 
+#ifdef CONFIG_PM
+extern int s3c_irq_wake(struct irq_data *data, unsigned int state);
+#else
+#define s3c_irq_wake NULL
+#endif
+
 static const char name_exynos4210[] = "EXYNOS4210";
 static const char name_exynos4212[] = "EXYNOS4212";
 static const char name_exynos4412[] = "EXYNOS4412";
@@ -184,6 +190,11 @@ static struct map_desc exynos4_iodesc[] __initdata = {
 		.virtual	= (unsigned long)S5P_VA_DMC1,
 		.pfn		= __phys_to_pfn(EXYNOS4_PA_DMC1),
 		.length		= SZ_64K,
+		.type		= MT_DEVICE,
+	}, {
+		.virtual	= (unsigned long)S5P_VA_AUDSS,
+		.pfn		= __phys_to_pfn(EXYNOS4_PA_AUDSS),
+		.length		= SZ_4K,
 		.type		= MT_DEVICE,
 	}, {
 		.virtual	= (unsigned long)S3C_VA_USB_HSPHY,
@@ -325,6 +336,11 @@ static void __init exynos4_map_io(void)
 	s3c_fimc_setname(1, "exynos4-fimc");
 	s3c_fimc_setname(2, "exynos4-fimc");
 	s3c_fimc_setname(3, "exynos4-fimc");
+
+	s3c_sdhci_setname(0, "exynos4-sdhci");
+	s3c_sdhci_setname(1, "exynos4-sdhci");
+	s3c_sdhci_setname(2, "exynos4-sdhci");
+	s3c_sdhci_setname(3, "exynos4-sdhci");
 
 	/* The I2C bus controllers are directly compatible with s3c2440 */
 	s3c_i2c0_setname("s3c2440-i2c");
@@ -531,6 +547,9 @@ void __init exynos4_init_irq(void)
 	 * uses GIC instead of VIC.
 	 */
 	s5p_init_irq(NULL, 0);
+#ifdef CONFIG_PM
+	irq_get_chip(IRQ_RTC_ALARM)->irq_set_wake = s3c_irq_wake;
+#endif
 }
 
 void __init exynos5_init_irq(void)
