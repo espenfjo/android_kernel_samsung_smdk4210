@@ -1,5 +1,6 @@
 #include <linux/kernel.h>
 #include <asm/opcodes.h>
+#include <asm-generic/bug.h>
 
 static unsigned long
 __arm_gen_branch_thumb2(unsigned long pc, unsigned long addr, bool link)
