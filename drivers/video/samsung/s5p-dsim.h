@@ -44,6 +44,53 @@ struct mipi_lcd_driver {
 	s32	(*resume)(struct device *dev);
 };
 
+<<<<<<< HEAD
+=======
+struct dsim_ops {
+	u8	(*cmd_write)(void *ptr, u32 data0, u32 data1, u32 data2);
+	int	(*cmd_read)(void *ptr, u8 addr, u16 count, u8 *buf);
+	int	(*cmd_dcs_read)(void *ptr, u8 addr, u16 count, u8 *buf);
+	void	(*suspend)(void);
+	void	(*resume)(void);
+};
+
+/* Indicates the state of the device */
+struct dsim_global {
+	struct device *dev;
+	struct device panel;
+	struct clk *clock;
+	struct s5p_platform_dsim *pd;
+	struct dsim_config *dsim_info;
+	struct dsim_lcd_config *dsim_lcd_info;
+	/* lcd panel data. */
+	struct s3cfb_lcd *lcd_panel_info;
+	/* platform and machine specific data for lcd panel driver. */
+	struct mipi_ddi_platform_data *mipi_ddi_pd;
+	/* lcd panel driver based on MIPI-DSI. */
+	struct mipi_lcd_driver *mipi_drv;
+
+	unsigned int irq;
+	unsigned int te_irq;
+	unsigned int reg_base;
+	unsigned char state;
+	unsigned int data_lane;
+	enum dsim_byte_clk_src e_clk_src;
+	unsigned long hs_clk;
+	unsigned long byte_clk;
+	unsigned long escape_clk;
+	unsigned char freq_band;
+	char header_fifo_index[DSIM_HEADER_FIFO_SZ];
+
+	struct delayed_work	dsim_work;
+	struct delayed_work	check_hs_toggle_work;
+	unsigned int		dsim_toggle_per_frame_count;
+
+	spinlock_t slock;
+
+	struct dsim_ops		*ops;
+};
+
+>>>>>>> b121ed1... Update mali based on I9305 JB sources
 int s5p_dsim_register_lcd_driver(struct mipi_lcd_driver *lcd_drv);
 
 #endif /* _S5P_DSIM_LOWLEVEL_H */

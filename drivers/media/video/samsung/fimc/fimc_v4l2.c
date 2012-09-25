@@ -34,8 +34,15 @@ static int fimc_querycap(struct file *filp, void *fh,
 	sprintf(cap->bus_info, "FIMC AHB-bus");
 
 	cap->version = 0;
+#ifdef CONFIG_SLP_DMABUF
+	cap->capabilities = (V4L2_CAP_VIDEO_CAPTURE | V4L2_CAP_VIDEO_OUTPUT |
+			V4L2_CAP_VIDEO_OVERLAY | V4L2_CAP_STREAMING |
+			V4L2_CAP_VIDEO_OUTPUT_MPLANE |
+			V4L2_CAP_VIDEO_CAPTURE_MPLANE);
+#else
 	cap->capabilities = (V4L2_CAP_VIDEO_CAPTURE | V4L2_CAP_VIDEO_OUTPUT |
 				V4L2_CAP_VIDEO_OVERLAY | V4L2_CAP_STREAMING);
+#endif
 
 	return 0;
 }
@@ -46,6 +53,18 @@ static int fimc_reqbufs(struct file *filp, void *fh,
 	struct fimc_control *ctrl = ((struct fimc_prv_data *)fh)->ctrl;
 	int ret = -1;
 
+#ifdef CONFIG_SLP_DMABUF
+	if (V4L2_TYPE_IS_OUTPUT(b->type)) {
+		ret = fimc_reqbufs_output(fh, b);
+	} else if (b->type == V4L2_BUF_TYPE_VIDEO_CAPTURE
+		|| b->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
+		ret = fimc_reqbufs_capture(ctrl, b);
+	} else {
+		fimc_err("V4L2_BUF_TYPE_VIDEO_CAPTURE and "
+			"V4L2_BUF_TYPE_VIDEO_OUTPUT are only supported\n");
+		ret = -EINVAL;
+	}
+#else
 	if (b->type == V4L2_BUF_TYPE_VIDEO_CAPTURE) {
 		ret = fimc_reqbufs_capture(ctrl, b);
 	} else if (b->type == V4L2_BUF_TYPE_VIDEO_OUTPUT) {
@@ -55,6 +74,7 @@ static int fimc_reqbufs(struct file *filp, void *fh,
 			"V4L2_BUF_TYPE_VIDEO_OUTPUT are only supported\n");
 		ret = -EINVAL;
 	}
+#endif
 
 	return ret;
 }
@@ -64,6 +84,18 @@ static int fimc_querybuf(struct file *filp, void *fh, struct v4l2_buffer *b)
 	struct fimc_control *ctrl = ((struct fimc_prv_data *)fh)->ctrl;
 	int ret = -1;
 
+#ifdef CONFIG_SLP_DMABUF
+	if (V4L2_TYPE_IS_OUTPUT(b->type)) {
+		ret = fimc_querybuf_output(fh, b);
+	} else if (b->type == V4L2_BUF_TYPE_VIDEO_CAPTURE
+		|| b->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
+		ret = fimc_querybuf_capture(ctrl, b);
+	} else {
+		fimc_err("V4L2_BUF_TYPE_VIDEO_CAPTURE and "
+			"V4L2_BUF_TYPE_VIDEO_OUTPUT are only supported\n");
+		ret = -EINVAL;
+	}
+#else
 	if (b->type == V4L2_BUF_TYPE_VIDEO_CAPTURE) {
 		ret = fimc_querybuf_capture(ctrl, b);
 	} else if (b->type == V4L2_BUF_TYPE_VIDEO_OUTPUT) {
@@ -73,6 +105,7 @@ static int fimc_querybuf(struct file *filp, void *fh, struct v4l2_buffer *b)
 			"V4L2_BUF_TYPE_VIDEO_OUTPUT are only supported\n");
 		ret = -EINVAL;
 	}
+#endif
 
 	return ret;
 }
@@ -147,6 +180,18 @@ static int fimc_cropcap(struct file *filp, void *fh, struct v4l2_cropcap *a)
 	struct fimc_control *ctrl = ((struct fimc_prv_data *)fh)->ctrl;
 	int ret = -1;
 
+#ifdef CONFIG_SLP_DMABUF
+	if (V4L2_TYPE_IS_OUTPUT(a->type)) {
+		ret = fimc_cropcap_output(fh, a);
+	} else if (a->type == V4L2_BUF_TYPE_VIDEO_CAPTURE
+		|| a->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
+		ret = fimc_cropcap_capture(ctrl, a);
+	} else {
+		fimc_err("V4L2_BUF_TYPE_VIDEO_CAPTURE and "
+			"V4L2_BUF_TYPE_VIDEO_OUTPUT are only supported\n");
+		ret = -EINVAL;
+	}
+#else
 	if (a->type == V4L2_BUF_TYPE_VIDEO_CAPTURE) {
 		ret = fimc_cropcap_capture(ctrl, a);
 	} else if (a->type == V4L2_BUF_TYPE_VIDEO_OUTPUT) {
@@ -156,6 +201,7 @@ static int fimc_cropcap(struct file *filp, void *fh, struct v4l2_cropcap *a)
 			"V4L2_BUF_TYPE_VIDEO_OUTPUT are only supported\n");
 		ret = -EINVAL;
 	}
+#endif
 
 	return ret;
 }
@@ -165,6 +211,18 @@ static int fimc_g_crop(struct file *filp, void *fh, struct v4l2_crop *a)
 	struct fimc_control *ctrl = ((struct fimc_prv_data *)fh)->ctrl;
 	int ret = -1;
 
+#ifdef CONFIG_SLP_DMABUF
+	if (V4L2_TYPE_IS_OUTPUT(a->type)) {
+		ret = fimc_g_crop_output(fh, a);
+	} else if (a->type == V4L2_BUF_TYPE_VIDEO_CAPTURE
+		|| a->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
+		ret = fimc_g_crop_capture(ctrl, a);
+	} else {
+		fimc_err("V4L2_BUF_TYPE_VIDEO_CAPTURE and "
+			"V4L2_BUF_TYPE_VIDEO_OUTPUT are only supported\n");
+		ret = -EINVAL;
+	}
+#else
 	if (a->type == V4L2_BUF_TYPE_VIDEO_CAPTURE) {
 		ret = fimc_g_crop_capture(ctrl, a);
 	} else if (a->type == V4L2_BUF_TYPE_VIDEO_OUTPUT) {
@@ -174,6 +232,7 @@ static int fimc_g_crop(struct file *filp, void *fh, struct v4l2_crop *a)
 			"V4L2_BUF_TYPE_VIDEO_OUTPUT are only supported\n");
 		ret = -EINVAL;
 	}
+#endif
 
 	return ret;
 }
@@ -183,6 +242,18 @@ static int fimc_s_crop(struct file *filp, void *fh, struct v4l2_crop *a)
 	struct fimc_control *ctrl = ((struct fimc_prv_data *)fh)->ctrl;
 	int ret = -1;
 
+#ifdef CONFIG_SLP_DMABUF
+	if (V4L2_TYPE_IS_OUTPUT(a->type)) {
+		ret = fimc_s_crop_output(fh, a);
+	} else if (a->type == V4L2_BUF_TYPE_VIDEO_CAPTURE
+		|| a->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
+		ret = fimc_s_crop_capture(ctrl, a);
+	} else {
+		fimc_err("V4L2_BUF_TYPE_VIDEO_CAPTURE and "
+			"V4L2_BUF_TYPE_VIDEO_OUTPUT are only supported\n");
+		ret = -EINVAL;
+	}
+#else
 	if (a->type == V4L2_BUF_TYPE_VIDEO_CAPTURE) {
 		ret = fimc_s_crop_capture(ctrl, a);
 	} else if (a->type == V4L2_BUF_TYPE_VIDEO_OUTPUT) {
@@ -192,6 +263,7 @@ static int fimc_s_crop(struct file *filp, void *fh, struct v4l2_crop *a)
 			"V4L2_BUF_TYPE_VIDEO_OUTPUT are only supported\n");
 		ret = -EINVAL;
 	}
+#endif
 
 	return ret;
 }
@@ -201,6 +273,18 @@ static int fimc_streamon(struct file *filp, void *fh, enum v4l2_buf_type i)
 	struct fimc_control *ctrl = ((struct fimc_prv_data *)fh)->ctrl;
 	int ret = -1;
 
+#ifdef CONFIG_SLP_DMABUF
+	if (V4L2_TYPE_IS_OUTPUT(i)) {
+		ret = fimc_streamon_output(fh);
+	} else if (i == V4L2_BUF_TYPE_VIDEO_CAPTURE
+		|| i == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
+		ret = fimc_streamon_capture(ctrl);
+	} else {
+		fimc_err("V4L2_BUF_TYPE_VIDEO_CAPTURE and "
+			"V4L2_BUF_TYPE_VIDEO_OUTPUT are only supported\n");
+		ret = -EINVAL;
+	}
+#else
 	if (i == V4L2_BUF_TYPE_VIDEO_CAPTURE) {
 		ret = fimc_streamon_capture(ctrl);
 	} else if (i == V4L2_BUF_TYPE_VIDEO_OUTPUT) {
@@ -210,6 +294,7 @@ static int fimc_streamon(struct file *filp, void *fh, enum v4l2_buf_type i)
 			"V4L2_BUF_TYPE_VIDEO_OUTPUT are only supported\n");
 		ret = -EINVAL;
 	}
+#endif
 
 	return ret;
 }
@@ -219,6 +304,18 @@ static int fimc_streamoff(struct file *filp, void *fh, enum v4l2_buf_type i)
 	struct fimc_control *ctrl = ((struct fimc_prv_data *)fh)->ctrl;
 	int ret = -1;
 
+#ifdef CONFIG_SLP_DMABUF
+	if (V4L2_TYPE_IS_OUTPUT(i)) {
+		ret = fimc_streamoff_output(fh);
+	} else if (i == V4L2_BUF_TYPE_VIDEO_CAPTURE
+		|| i == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
+		ret = fimc_streamoff_capture(ctrl);
+	} else {
+		fimc_err("V4L2_BUF_TYPE_VIDEO_CAPTURE and "
+			"V4L2_BUF_TYPE_VIDEO_OUTPUT are only supported\n");
+		ret = -EINVAL;
+	}
+#else
 	if (i == V4L2_BUF_TYPE_VIDEO_CAPTURE) {
 		ret = fimc_streamoff_capture(ctrl);
 	} else if (i == V4L2_BUF_TYPE_VIDEO_OUTPUT) {
@@ -228,6 +325,7 @@ static int fimc_streamoff(struct file *filp, void *fh, enum v4l2_buf_type i)
 			"V4L2_BUF_TYPE_VIDEO_OUTPUT are only supported\n");
 		ret = -EINVAL;
 	}
+#endif
 
 	return ret;
 }
@@ -237,6 +335,18 @@ static int fimc_qbuf(struct file *filp, void *fh, struct v4l2_buffer *b)
 	struct fimc_control *ctrl = ((struct fimc_prv_data *)fh)->ctrl;
 	int ret = -1;
 
+#ifdef CONFIG_SLP_DMABUF
+	if (V4L2_TYPE_IS_OUTPUT(b->type)) {
+		ret = fimc_qbuf_output(fh, b);
+	} else if (b->type == V4L2_BUF_TYPE_VIDEO_CAPTURE
+		|| b->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
+		ret = fimc_qbuf_capture(ctrl, b);
+	} else {
+		fimc_err("V4L2_BUF_TYPE_VIDEO_CAPTURE and "
+			"V4L2_BUF_TYPE_VIDEO_OUTPUT are only supported\n");
+		ret = -EINVAL;
+	}
+#else
 	if (b->type == V4L2_BUF_TYPE_VIDEO_CAPTURE) {
 		ret = fimc_qbuf_capture(ctrl, b);
 	} else if (b->type == V4L2_BUF_TYPE_VIDEO_OUTPUT) {
@@ -246,6 +356,7 @@ static int fimc_qbuf(struct file *filp, void *fh, struct v4l2_buffer *b)
 			"V4L2_BUF_TYPE_VIDEO_OUTPUT are only supported\n");
 		ret = -EINVAL;
 	}
+#endif
 
 	return ret;
 }
@@ -255,6 +366,18 @@ static int fimc_dqbuf(struct file *filp, void *fh, struct v4l2_buffer *b)
 	struct fimc_control *ctrl = ((struct fimc_prv_data *)fh)->ctrl;
 	int ret = -1;
 
+#ifdef CONFIG_SLP_DMABUF
+	if (V4L2_TYPE_IS_OUTPUT(b->type)) {
+		ret = fimc_dqbuf_output(fh, b);
+	} else if (b->type == V4L2_BUF_TYPE_VIDEO_CAPTURE
+		|| b->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
+		ret = fimc_dqbuf_capture(ctrl, b);
+	} else {
+		fimc_err("V4L2_BUF_TYPE_VIDEO_CAPTURE and "
+			"V4L2_BUF_TYPE_VIDEO_OUTPUT are only supported\n");
+		ret = -EINVAL;
+	}
+#else
 	if (b->type == V4L2_BUF_TYPE_VIDEO_CAPTURE) {
 		ret = fimc_dqbuf_capture(ctrl, b);
 	} else if (b->type == V4L2_BUF_TYPE_VIDEO_OUTPUT) {
@@ -264,6 +387,7 @@ static int fimc_dqbuf(struct file *filp, void *fh, struct v4l2_buffer *b)
 			"V4L2_BUF_TYPE_VIDEO_OUTPUT are only supported\n");
 		ret = -EINVAL;
 	}
+#endif
 
 	return ret;
 }
@@ -309,6 +433,12 @@ const struct v4l2_ioctl_ops fimc_v4l2_ops = {
 	.vidioc_querymenu		= fimc_querymenu,
 	.vidioc_g_fmt_vid_out		= fimc_g_fmt_vid_out,
 	.vidioc_s_fmt_vid_out		= fimc_s_fmt_vid_out,
+#ifdef CONFIG_SLP_DMABUF
+	.vidioc_g_fmt_vid_cap_mplane	= fimc_g_fmt_vid_capture,
+	.vidioc_s_fmt_vid_cap_mplane	= fimc_s_fmt_vid_capture,
+	.vidioc_g_fmt_vid_out_mplane	= fimc_g_fmt_vid_out,
+	.vidioc_s_fmt_vid_out_mplane	= fimc_s_fmt_vid_out,
+#endif
 	.vidioc_try_fmt_vid_out		= fimc_try_fmt_vid_out,
 	.vidioc_g_fbuf			= fimc_g_fbuf,
 	.vidioc_s_fbuf			= fimc_s_fbuf,

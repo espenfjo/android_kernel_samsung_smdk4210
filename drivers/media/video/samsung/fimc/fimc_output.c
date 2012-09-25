@@ -24,6 +24,9 @@
 #include <plat/media.h>
 #include <linux/clk.h>
 #include <linux/delay.h>
+#ifdef CONFIG_SLP_DMABUF
+#include <linux/dma-buf.h>
+#endif
 
 #include "fimc.h"
 #include "fimc-ipc.h"
@@ -279,6 +282,33 @@ static void fimc_init_out_buf(struct fimc_ctx *ctx)
 		ctx->outq[i] = -1;
 	}
 }
+
+#ifdef CONFIG_SLP_DMABUF
+static int fimc_set_out_num_plane(struct fimc_control *ctrl,
+				   struct fimc_ctx *ctx)
+{
+	u32 format = ctx->pix.pixelformat;
+
+	switch (format) {
+	case V4L2_PIX_FMT_RGB32:
+	case V4L2_PIX_FMT_RGB565:	/* fall through */
+	case V4L2_PIX_FMT_UYVY:		/* fall through */
+	case V4L2_PIX_FMT_YUYV:
+		return PLANE_1;
+	case V4L2_PIX_FMT_NV12:         /* fall through */
+	case V4L2_PIX_FMT_NV21:         /* fall through */
+	case V4L2_PIX_FMT_NV12T:
+		return PLANE_2;
+	case V4L2_PIX_FMT_YUV420:       /* fall through */
+		return PLANE_3;
+	default:
+		fimc_err("%s: Invalid pixelformt : %d\n", __func__, format);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+#endif
 
 static int fimc_outdev_set_src_buf(struct fimc_control *ctrl,
 				   struct fimc_ctx *ctx)
@@ -1602,6 +1632,10 @@ int fimc_reqbufs_output(void *fh, struct v4l2_requestbuffers *b)
 		default:
 			break;
 		}
+#ifdef CONFIG_SLP_DMABUF
+		if (b->memory == V4L2_MEMORY_DMABUF)
+			_fimc_queue_free(ctrl, V4L2_BUF_TYPE_VIDEO_OUTPUT);
+#endif
 	} else {
 		/* initialize source buffers */
 		if (b->memory == V4L2_MEMORY_MMAP) {
@@ -1613,6 +1647,14 @@ int fimc_reqbufs_output(void *fh, struct v4l2_requestbuffers *b)
 			if (mode == FIMC_OVLY_DMA_AUTO ||
 					mode == FIMC_OVLY_NOT_FIXED)
 				ctx->overlay.req_idx = FIMC_USERPTR_IDX;
+#ifdef CONFIG_SLP_DMABUF
+		} else if (b->memory == V4L2_MEMORY_DMABUF) {
+			int num_planes;
+
+			num_planes = fimc_set_out_num_plane(ctrl, ctx);
+			fimc_queue_alloc(ctrl, b->type, b->memory, b->count,
+					num_planes);
+#endif
 		}
 
 		ctx->is_requested = 1;
@@ -2269,6 +2311,30 @@ int fimc_output_set_dst_addr(struct fimc_control *ctrl,
 	return 0;
 }
 
+static int fimc_outdev_start_operation(struct fimc_control *ctrl,
+				       struct fimc_ctx *ctx, int idx)
+{
+	int ret = 0;
+	unsigned long spin_flags;
+
+	spin_lock_irqsave(&ctrl->out->slock, spin_flags);
+	ret = fimc_outdev_start_camif(ctrl);
+	if (ret < 0) {
+		fimc_err("Fail: fimc_start_camif\n");
+		spin_unlock_irqrestore(&ctrl->out->slock, spin_flags);
+		return -EINVAL;
+	}
+
+	ctrl->out->idxs.active.idx = idx;
+	ctrl->out->idxs.active.ctx = ctx->ctx_num;
+
+	ctrl->status = FIMC_STREAMON;
+	ctx->status = FIMC_STREAMON;
+	spin_unlock_irqrestore(&ctrl->out->slock, spin_flags);
+
+	return ret;
+}
+
 static int fimc_qbuf_output_single_buf(struct fimc_control *ctrl,
 				       struct fimc_ctx *ctx,
 				       int idx)
@@ -2288,7 +2354,9 @@ static int fimc_qbuf_output_single_buf(struct fimc_control *ctrl,
 
 	switch (format) {
 	case V4L2_PIX_FMT_RGB32:
-	case V4L2_PIX_FMT_RGB565:	/* fall through */
+	case V4L2_PIX_FMT_RGB565:
+	case V4L2_PIX_FMT_YUYV:
+	case V4L2_PIX_FMT_UYVY:
 		buf_set.base[FIMC_ADDR_Y] = (dma_addr_t)ctx->fbuf.base;
 		break;
 	case V4L2_PIX_FMT_YUV420:
@@ -2349,10 +2417,13 @@ static int fimc_qbuf_output_multi_buf(struct fimc_control *ctrl,
 
 	switch (format) {
 	case V4L2_PIX_FMT_RGB32:
-	case V4L2_PIX_FMT_RGB565:	/* fall through */
+	case V4L2_PIX_FMT_RGB565:
+	case V4L2_PIX_FMT_YUYV:
+	case V4L2_PIX_FMT_UYVY:
 		buf_set.base[FIMC_ADDR_Y] = ctx->dst[idx].base[FIMC_ADDR_Y];
 		break;
 	case V4L2_PIX_FMT_YUV420:
+	case V4L2_PIX_FMT_YVU420:       /* fall through */
 		buf_set.base[FIMC_ADDR_Y] = ctx->dst[idx].base[FIMC_ADDR_Y];
 		buf_set.base[FIMC_ADDR_CB] = ctx->dst[idx].base[FIMC_ADDR_CB];
 		buf_set.base[FIMC_ADDR_CR] = ctx->dst[idx].base[FIMC_ADDR_CR];
@@ -2573,7 +2644,7 @@ static int fimc_update_in_queue_addr(struct fimc_control *ctrl,
 
 int fimc_qbuf_output(void *fh, struct v4l2_buffer *b)
 {
-	struct fimc_buf *buf = (struct fimc_buf *)b->m.userptr;
+	struct fimc_buf *buf;
 	struct fimc_ctx *ctx;
 	struct fimc_control *ctrl = ((struct fimc_prv_data *)fh)->ctrl;
 	int ctx_id = ((struct fimc_prv_data *)fh)->ctx_id;
@@ -2609,9 +2680,40 @@ int fimc_qbuf_output(void *fh, struct v4l2_buffer *b)
 	    (ctrl->status == FIMC_STREAMON) ||
 	    (ctrl->status == FIMC_STREAMON_IDLE)) {
 		if (b->memory == V4L2_MEMORY_USERPTR) {
+			buf = (struct fimc_buf *)b->m.userptr;
 			ret = fimc_update_in_queue_addr(ctrl, ctx, b->index, buf->base);
 			if (ret < 0)
 				return ret;
+#ifdef CONFIG_SLP_DMABUF
+		} else if (b->memory == V4L2_MEMORY_DMABUF) {
+			struct vb2_buffer *vb;
+			dma_addr_t	addr[3];
+			struct sg_table *sg;
+			struct dma_buf_attachment *dba;
+			int i;
+
+			vb = ctrl->out_bufs[b->index];
+			ret = _qbuf_dmabuf(ctrl, vb, b);
+			if (ret < 0) {
+				fimc_err("_qbuf_dmabuf failed ret = %d\n", ret);
+				return ret;
+			}
+			for (i = 0; i < vb->num_planes; i++) {
+				dba = vb->planes[i].mem_priv;
+				sg = dba->priv;
+				if (sg)
+					addr[i] = sg_dma_address(sg->sgl);
+				else {
+					fimc_err("%s: Wrong sg value.\n",
+						__func__);
+					return -ENODEV;
+				}
+			}
+			ret = fimc_update_in_queue_addr(ctrl, ctx, b->index,
+				addr);
+			if (ret < 0)
+				return ret;
+#endif
 		}
 
 #if defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME)
@@ -2731,7 +2833,6 @@ int fimc_dqbuf_output(void *fh, struct v4l2_buffer *b)
 		if (ret == 0) {
 			fimc_dump_context(ctrl, ctx);
 			fimc_recover_output(ctrl, ctx);
-			pm_runtime_put_sync(ctrl->dev);
 			fimc_err("[0] out_queue is empty\n");
 			return -EAGAIN;
 		} else if (ret == -ERESTARTSYS) {
@@ -2747,7 +2848,18 @@ int fimc_dqbuf_output(void *fh, struct v4l2_buffer *b)
 			}
 		}
 	}
+#ifdef CONFIG_SLP_DMABUF
+	if (b->memory == V4L2_MEMORY_DMABUF) {
+		struct vb2_buffer *vb;
 
+		vb = ctrl->out_bufs[idx];
+		ret = _dqbuf_dmabuf(ctrl, vb, b);
+		if (ret < 0) {
+			fimc_err("%s: _qbuf_dmabuf error.\n", __func__);
+			return -ENODEV;
+		}
+	}
+#endif
 	b->index = idx;
 
 	fimc_info2("ctx(%d) dqueued idx = %d\n", ctx->ctx_num, b->index);
