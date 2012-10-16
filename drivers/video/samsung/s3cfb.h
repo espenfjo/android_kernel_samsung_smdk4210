@@ -38,7 +38,7 @@
 #else
 #define FIMD_MAX		1
 #endif
-#define MAX_BUFFER_NUM		3
+#define MAX_BUFFER_NUM	3
 
 #define POWER_ON		1
 #define POWER_OFF		0
@@ -201,6 +201,8 @@ struct sysmmu_flag {
 struct s3cfb_global {
 	void __iomem		*regs;
 	void __iomem		*regs_org;
+	void __iomem		*ielcd_regs;
+	void			*data;
 	struct mutex		lock;
 	spinlock_t		slock;
 	struct device		*dev;
@@ -363,6 +365,7 @@ struct s3c_reg_data {
 #if defined(CONFIG_CPU_EXYNOS4210)
 #define S3CFB_SET_WIN_MEM_START		_IOW('F', 312, u32)
 #endif
+#define S3CFB_SET_ALPHA_MODE		_IOW('F', 313, unsigned int)
 
 extern struct fb_ops			s3cfb_ops;
 extern struct s3cfb_global	*get_fimd_global(int id);
@@ -431,6 +434,8 @@ extern int s3cfb_window_off(struct s3cfb_global *ctrl, int id);
 extern int s3cfb_win_map_on(struct s3cfb_global *ctrl, int id, int color);
 extern int s3cfb_win_map_off(struct s3cfb_global *ctrl, int id);
 extern int s3cfb_set_window_control(struct s3cfb_global *ctrl, int id);
+extern int s3cfb_set_alpha_mode(struct s3cfb_global *ctrl, int id, unsigned int mode);
+extern int s3cfb_set_alpha_value_width(struct s3cfb_global *ctrl, int id);
 extern int s3cfb_set_alpha_blending(struct s3cfb_global *ctrl, int id);
 extern int s3cfb_set_oneshot(struct s3cfb_global *ctrl, int value);
 extern int s3cfb_set_alpha_value(struct s3cfb_global *ctrl, int value);
@@ -454,11 +459,8 @@ extern void s3cfb_clean_outer_pagetable(unsigned long vaddr, size_t size);
 extern int s3cfb_wait_for_vsync(struct s3cfb_global *fbdev, u32 timeout);
 #endif
 #ifdef CONFIG_FB_S5P_MIPI_DSIM
-extern void s3cfb_set_trigger(struct s3cfb_global *ctrl);
-extern void s3cfb_trigger(void);
-#endif
-extern int s3cfb_check_vsync_status(struct s3cfb_global *ctrl);
 extern int s3cfb_vsync_status_check(void);
+#endif
 
 #ifdef CONFIG_HAS_WAKELOCK
 #ifdef CONFIG_HAS_EARLYSUSPEND
@@ -474,7 +476,8 @@ extern void s3cfb_set_lcd_info(struct s3cfb_global *ctrl);
 extern void s5p_dsim_early_suspend(void);
 extern void s5p_dsim_late_resume(void);
 extern void set_dsim_hs_clk_toggle_count(u8 count);
-extern void set_dsim_lcd_enabled(void);
+extern void set_dsim_lcd_enabled(u8 enable);
+extern u32 read_dsim_register(u32 num);
 #endif
 
 
@@ -486,5 +489,12 @@ extern void ams369fg06_gpio_cfg(void);
 #elif defined(CONFIG_FB_S5P_LMS501KF03)
 extern void lms501kf03_ldi_disable(void);
 #endif
+
+#if defined(CONFIG_FB_S5P_S6C1372) || defined(CONFIG_FB_S5P_S6F1202A)
+extern void s5c1372_ldi_enable(void);
+extern void s5c1372_ldi_disable(void);
+#endif
+
+extern int lcdfreq_init(struct fb_info *fb);
 
 #endif /* _S3CFB_H */
