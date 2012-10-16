@@ -23,9 +23,6 @@ endif
 if (CPU_EXYNOS4210 || CPU_EXYNOS4212 || CPU_EXYNOS4412) && !SLP
 	source "drivers/media/video/samsung/mali/Kconfig"
 endif
-if SLP
-	source "drivers/media/video/samsung/mali_r3p0/Kconfig"
-endif
 
 config VIDEO_FIMG2D
 	bool
@@ -37,14 +34,9 @@ config VIDEO_FIMG2D_DEBUG
 	depends on VIDEO_FIMG2D
 	default n
 
-if ARCH_EXYNOS5
+if ARCH_EXYNOS5 || ARCH_EXYNOS4
 source "drivers/media/video/samsung/fimg2d3x/Kconfig"
 source "drivers/media/video/samsung/fimg2d4x/Kconfig"
-endif
-
-if ARCH_EXYNOS4
-source "drivers/media/video/samsung/fimg2d3x-exynos4/Kconfig"
-source "drivers/media/video/samsung/fimg2d4x-exynos4/Kconfig"
 endif
 
 
